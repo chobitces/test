@@ -4,6 +4,7 @@ import queue
 from app.serialInterface import SerialInterface
 from app.app_ssh import SSH_Client
 import tkinter.messagebox as messagebox
+import app.tool as tl
 
 class Connection():
     connect_type = ""
@@ -56,6 +57,19 @@ class Connection():
 
 
         return result
+
+
+    def apiLogout(self):
+        if(self.ConnectedFlag == 1):
+            self.logout()
+            self.ConnectedFlag = 0
+            tl.stop_thread(self.receiveProcess)
+            return 0
+        else:
+            messagebox.showerror(title='警告！', message='未连接')
+            return -1
+
+
     def __revDataProcess(self):
         '''
         函数名称：
@@ -74,7 +88,8 @@ class Connection():
                     if self.RevFlag == 1:
                         self.readbuff = self.readbuff + bytes
                 time.sleep(0.01)
-            except:
+            except Exception as E:
+                print(E)
                 time.sleep(0.1)
                 if(self.ConnectedFlag == 1):
                     messagebox.showerror(title='警告！', message='读取数据失败')

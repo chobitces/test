@@ -15,7 +15,7 @@ class Ui_MainWindows():
         # 设置窗口是否可变长、宽，True：可变，False：不可变
         myui.resizable(width=True, height=True)
         # 定义一个容器放接受区域的显示
-        self.frame_revaera = tk.Frame(myui, bg="#FFFFF0") #象牙色
+        self.frame_revaera = tk.Frame(myui, bg="red") #象牙色
         self.frame_revaera.place(relx = 0.02, rely = 0.02, relheight = 0.58, relwidth = 0.96)
         self.label_rev = tk.Label(self.frame_revaera, text = "接收区域")
         self.label_rev.place(relx = 0.02, rely = 0.02, relheight = 0.03, relwidth = 0.05)
@@ -49,6 +49,10 @@ class Ui_MainWindows():
         self.text_rev.see(tk.END)
         # self.text_rev.update()
 
+    def clearRevArea(self):
+        self.text_rev.config(state = tk.NORMAL) #由于之前把这个框DISALBE 所以写之前需要打开
+        self.text_rev.delete("1.0","end")
+        self.text_rev.config(state = tk.DISABLED) #再次关闭
 
 def test():
     root = tk.Tk()

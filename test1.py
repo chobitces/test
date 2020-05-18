@@ -1,13 +1,17 @@
 import threading
 import time
 import re
+import os
 
 from ui.main_windows import Ui_MainWindows
 from ui.connect_ui import Ui_ConnectSetWindows, Ui_SerialSetWindows, Ui_SshSetWindows
 from app.serialInterface import SerialInterface
 import tkinter as tk
+from  tkinter  import ttk
 import tkinter.messagebox as messagebox
 from  app.connection import Connection
+import app.tool as tl
+import app.config as cfg
 
 class Application():
     def __init__(self,ui):
@@ -18,6 +22,7 @@ class Application():
         self.ConnectApi = Connection()
         self.mainUiWidget()
         self.initValue()
+        self.configInit()
         # 建脚本运行的线程，传入的参数为脚本的路径
         self.OneSecPrcocess = threading.Thread(target=self.oneSecProcess)
         self.OneSecPrcocess.setDaemon(True)
@@ -25,6 +30,69 @@ class Application():
     def initValue(self):
         self.connectuiopenflag = 0  # 连接方式选择的那个界面是否打开的标志
         self.connectedFlag = 0      # 是否连接的标志位
+    def configInit(self):
+        self.Config = cfg.Config(os.getcwd()) # 配置文件放在当前目前下
+        self.displayConfgMenu()
+
+    def displayConfgMenu(self):
+        self.sections = self.Config.read_section()   # 读取配置文件
+        if self.sections:  # 如果有配置文件  则显示选取配置文件的界面
+            self.sections_ui = tk.Toplevel(self.root)
+            self.sections_ui.title("连接") # 修改框体的名字,也可在创建时使用className参数来命名；
+            width = 250
+            height = 350
+            screenwidth = self.sections_ui.winfo_screenwidth()
+            screenheight = self.sections_ui.winfo_screenheight()
+            alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
+            self.sections_ui.geometry(alignstr)
+            self.sections_ui.resizable(width=True, height=True)
+
+            self.Treeview_Config = ttk.Treeview(self.sections_ui,show = "tree")
+            self.Treeview_Config.pack()
+            id = self.Treeview_Config.insert("",0,"Session",text="Session",values=("1"))  # ""表示父节点是根
+            for tp in range(len(self.sections)):
+                self.Treeview_Config.insert(id, tp, self.sections[tp], text= self.sections[tp], values=(str(tp + 2)))  # ""表示父节点是根
+            self.Treeview_Config.bind("<Double-1>",self.treeviewClick)
+
+
+
+    def treeviewClick(self,event):
+        print("双击")
+        item_text = 0
+        for item in self.Treeview_Config.selection():
+            item_text = int(self.Treeview_Config.item(item, "values")[0])
+        print(item_text,type(item_text))
+        if(item_text > 1):
+            self.sections_connect(item_text - 2)
+
+    def sections_connect(self,SectionId):
+        # 通过当前选择，在配置文件中查找，找到它的所有配置
+        try:
+            # 获取当前选择
+            currentSection = self.sections[SectionId]
+            print(currentSection)
+        except Exception as E:
+            messagebox.showerror(title='警告！', message = str(E))
+            return -1
+
+        tpdict = self.Config.load(currentSection)
+
+
+
+        self.sections_ui.destroy()
+
+        # 登陆
+        result = self.ConnectApi.apiLogin(tpdict)
+        if result == -1:
+            messagebox.showerror(title='警告！', message = "连接失败")
+        else:
+            self.connectedFlag = 1
+            self.MainWindow.frame_revaera.config(bg = "green")
+            self.receiveProcess = threading.Thread(target=self.revDataDiaplayProcess)
+            self.receiveProcess.setDaemon(True)
+            self.receiveProcess.start()
+
+
     def mainUiWidget(self):
         # 添加菜单栏
         self.menu1 = tk.Menu(self.root, tearoff=0)  # 1的话多了一个虚线，如果点击的话就会发现，这个菜单框可以独立出来显示
@@ -39,15 +107,23 @@ class Application():
         self.entry_sendaera.place(relx = 0.02, rely = 0.08, relheight = 0.45, relwidth = 0.96)
         self.entry_sendaera.bind("<Return>", self.sendDataFormSendArea)
 
-        self.root.bind("<Button-3>",self.rightMouseEvent)
+        self.MainWindow.text_rev.bind("<Button-3>",self.rightMouseEvent)
     def rightMouseEvent(self,event):
-        self.rmEvent = tk.Toplevel(self.root)
-        # event.x 鼠标左键的横坐标
-        # event.y 鼠标左键的纵坐标
-        print(event.x,event.y)
-        print(self.root.winfo_x(),self.root.winfo_y())
-        self.rmEvent.geometry('%dx%d+%d+%d' % (50, 200, self.root.winfo_x() + event.x,
-                                               self.root.winfo_y() + event.y))
+        self.rmMenu = tk.Menu(self.root,tearoff=False)
+        self.rmMenu.add_command(label = "清除",command=lambda:self.MainWindow.clearRevArea())
+        self.rmMenu.add_command(label = "断开连接",command=lambda:self.closeConnect())
+        self.rmMenu.post(event.x_root,event.y_root)
+
+    def closeConnect(self):
+        if(self.connectedFlag == 1):
+            state  = self.ConnectApi.apiLogout()
+            if(state == 0):
+                self.connectedFlag = 0
+                tl.stop_thread(self.receiveProcess)
+                self.MainWindow.frame_revaera.config(bg = "red")
+        else:
+            messagebox.showerror(title='警告！', message='未连接')
+
 
     def openConnectUi(self):
         if(self.connectuiopenflag == 0):
@@ -61,8 +137,6 @@ class Application():
                 messagebox.showerror(title='警告！', message='已连接')
         else:
             messagebox.showerror(title='警告！', message='界面已打开')
-
-
     def get_connect_type_param(self):
         showStr = []
         self.connect_type = self.ConnectUi.combox_connecttype.get() # 获取链接方式
@@ -124,7 +198,22 @@ class Application():
         if result == -1:
             messagebox.showerror(title='警告！', message='连接失败')
         else:
+            # 登陆成功后，将登陆方式及登陆的一些参数存储到配置文件中
+            # 如果配置文件中有一样名字的配置，就将这个配置名字加1放在（）中
+            while 1:
+                section = self.Config.read_section()
+                if tpdict["name"] in section:
+                    if "(" in tpdict["name"]:
+                        tpdict["name"] = tpdict["name"].split("(")[0] + "(cnt)".replace("cnt", str(cnt))
+                    else:
+                        tpdict["name"] = tpdict["name"] + "(cnt)".replace("cnt", str(cnt))
+                else:
+                    break
+                cnt = cnt + 1
+            # 保存这个配置
+            self.Config.save(tpdict)
             self.connectedFlag = 1
+            self.MainWindow.frame_revaera.config(bg = "green")
             self.receiveProcess = threading.Thread(target=self.revDataDiaplayProcess)
             self.receiveProcess.setDaemon(True)
             self.receiveProcess.start()
@@ -138,7 +227,7 @@ class Application():
     def oneSecProcess(self):
         while(1):
             time.sleep(1.0)
-
+            # print("1s")
             # 下面是判断是否关闭连接设置的窗口
             if(self.connectuiopenflag == 1):
                 try:
