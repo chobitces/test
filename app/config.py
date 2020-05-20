@@ -52,6 +52,10 @@ class Config():
         sectionlist = config.sections()
         return sectionlist
 
+    def del_section(self):
+        self.confpath = self.confpath
+        os.remove(self.confpath)
+
 
 
 def test():
@@ -70,9 +74,7 @@ def test():
     path  = os.getcwd()
     print(path)
     config = Config(path)
-    config.save(tpdict1)
-    config.save(tpdict2)
-    config.load("SSH")
+    config.del_section()
 
 if __name__ == '__main__':
     test()

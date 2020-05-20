@@ -30,31 +30,43 @@ class Application():
     def initValue(self):
         self.connectuiopenflag = 0  # 连接方式选择的那个界面是否打开的标志
         self.connectedFlag = 0      # 是否连接的标志位
+        self.openConfgUiFlag = 0
+        self.sendHistoryBuff = []
+        self.sendHistoryBuffCnt = 0
     def configInit(self):
         self.Config = cfg.Config(os.getcwd()) # 配置文件放在当前目前下
-        self.displayConfgMenu()
-
-    def displayConfgMenu(self):
-        self.sections = self.Config.read_section()   # 读取配置文件
-        if self.sections:  # 如果有配置文件  则显示选取配置文件的界面
-            self.sections_ui = tk.Toplevel(self.root)
-            self.sections_ui.title("连接") # 修改框体的名字,也可在创建时使用className参数来命名；
-            width = 250
-            height = 350
-            screenwidth = self.sections_ui.winfo_screenwidth()
-            screenheight = self.sections_ui.winfo_screenheight()
-            alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
-            self.sections_ui.geometry(alignstr)
-            self.sections_ui.resizable(width=True, height=True)
-
-            self.Treeview_Config = ttk.Treeview(self.sections_ui,show = "tree")
-            self.Treeview_Config.pack()
-            id = self.Treeview_Config.insert("",0,"Session",text="Session",values=("1"))  # ""表示父节点是根
-            for tp in range(len(self.sections)):
-                self.Treeview_Config.insert(id, tp, self.sections[tp], text= self.sections[tp], values=(str(tp + 2)))  # ""表示父节点是根
-            self.Treeview_Config.bind("<Double-1>",self.treeviewClick)
-
-
+        self.displayConfgUi()
+    def displayConfgUi(self):
+        if(self.openConfgUiFlag == 0):
+            self.sections = self.Config.read_section()   # 读取配置文件
+            if self.sections:  # 如果有配置文件  则显示选取配置文件的界面
+                self.sections_ui = tk.Toplevel(self.root)
+                self.sections_ui.title("连接") # 修改框体的名字,也可在创建时使用className参数来命名；
+                width = 250
+                height = 350
+                screenwidth = self.sections_ui.winfo_screenwidth()
+                screenheight = self.sections_ui.winfo_screenheight()
+                alignstr = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
+                self.sections_ui.geometry(alignstr)
+                self.sections_ui.resizable(width=True, height=True)
+                self.sections_ui.attributes("-topmost", 1)
+                self.openConfgUiFlag = 1
+                self.Treeview_Config = ttk.Treeview(self.sections_ui,show = "tree")
+                self.Treeview_Config.pack()
+                id = self.Treeview_Config.insert("",0,"Session",text="Session",values=("1"))  # ""表示父节点是根
+                for tp in range(len(self.sections)):
+                    self.Treeview_Config.insert(id, tp, self.sections[tp], text= self.sections[tp], values=(str(tp + 2)))  # ""表示父节点是根
+                self.Treeview_Config.bind("<Double-1>",self.treeviewClick)
+                btn1 = tk.Button(self.sections_ui,width = 5,text = "新建",
+                                                command = self.openConnectUi)
+                btn1.pack()
+                btn2 = tk.Button(self.sections_ui,width = 5,text = "清除",
+                                                command = self.Config.del_section)
+                btn2.pack()
+            else:
+                self.openConnectUi()
+        else:
+            messagebox.showerror(title='警告！', message='界面已打开')
 
     def treeviewClick(self,event):
         print("双击")
@@ -64,7 +76,6 @@ class Application():
         print(item_text,type(item_text))
         if(item_text > 1):
             self.sections_connect(item_text - 2)
-
     def sections_connect(self,SectionId):
         # 通过当前选择，在配置文件中查找，找到它的所有配置
         try:
@@ -80,18 +91,21 @@ class Application():
 
 
         self.sections_ui.destroy()
+        self.openConfgUiFlag = 0
 
         # 登陆
-        result = self.ConnectApi.apiLogin(tpdict)
-        if result == -1:
-            messagebox.showerror(title='警告！', message = "连接失败")
+        if(self.connectedFlag == 0):
+            result = self.ConnectApi.apiLogin(tpdict)
+            if result == -1:
+                messagebox.showerror(title='警告！', message = "连接失败")
+            else:
+                self.connectedFlag = 1
+                self.MainWindow.frame_revaera.config(bg = "green")
+                self.receiveProcess = threading.Thread(target=self.revDataDiaplayProcess)
+                self.receiveProcess.setDaemon(True)
+                self.receiveProcess.start()
         else:
-            self.connectedFlag = 1
-            self.MainWindow.frame_revaera.config(bg = "green")
-            self.receiveProcess = threading.Thread(target=self.revDataDiaplayProcess)
-            self.receiveProcess.setDaemon(True)
-            self.receiveProcess.start()
-
+            messagebox.showerror(title='警告！', message = "已连接")
 
     def mainUiWidget(self):
         # 添加菜单栏
@@ -101,19 +115,27 @@ class Application():
         self.menubar.add_cascade(label="文件", menu = self.menu1)
         self.root.config(menu = self.menubar)
 
+        self.Button_OpenSessionsUi = tk.Button(self.MainWindow.frame_memu,width = 5,text = "打开",
+                                                command = self.displayConfgUi)
+        self.Button_OpenSessionsUi.grid(row=0)
+        self.Button_CreatConfigUi = tk.Button(self.MainWindow.frame_memu,width = 5,text = "打开",
+                                                command = self.displayConfgUi)
+        self.Button_CreatConfigUi.grid(row=0,column = 1)
 
 
         self.entry_sendaera = tk.Entry(self.MainWindow.frame_sendaera, textvariable = self.senddataVar)
         self.entry_sendaera.place(relx = 0.02, rely = 0.08, relheight = 0.45, relwidth = 0.96)
         self.entry_sendaera.bind("<Return>", self.sendDataFormSendArea)
+        self.entry_sendaera.bind("<KeyPress-Up>", self.senddatakeyup)
+        self.entry_sendaera.bind("<KeyPress-Down>", self.senddatakeydown)
 
         self.MainWindow.text_rev.bind("<Button-3>",self.rightMouseEvent)
+
     def rightMouseEvent(self,event):
         self.rmMenu = tk.Menu(self.root,tearoff=False)
         self.rmMenu.add_command(label = "清除",command=lambda:self.MainWindow.clearRevArea())
         self.rmMenu.add_command(label = "断开连接",command=lambda:self.closeConnect())
         self.rmMenu.post(event.x_root,event.y_root)
-
     def closeConnect(self):
         if(self.connectedFlag == 1):
             state  = self.ConnectApi.apiLogout()
@@ -123,11 +145,17 @@ class Application():
                 self.MainWindow.frame_revaera.config(bg = "red")
         else:
             messagebox.showerror(title='警告！', message='未连接')
-
-
     def openConnectUi(self):
         if(self.connectuiopenflag == 0):
             if(self.connectedFlag == 0):
+                try:
+                    self.sections_ui.state()  # 检测这个界面是否打开 如果是打开的  就关掉
+                    self.sections_ui.destroy()
+                    self.openConfgUiFlag = 0
+                except:
+                    pass
+
+
                 self.ConnectUi = Ui_ConnectSetWindows(self.root)
                 self.ConnectUi_Connect = tk.Button(self.ConnectUi.ConnectUi,width = 10,text = "确定",
                                                 command = self.get_connect_type_param)
@@ -237,17 +265,45 @@ class Application():
                         self.ConnectSetUi.ConnectUi.state()
                     except:
                         self.connectuiopenflag = 0
+            if(self.openConfgUiFlag == 1):
+                try:
+                    self.ConnectUi.ConnectUi.state()
+                except:
+                    self.openConfgUiFlag = 0
     def sendDataFormSendArea(self,ev = None):
         if(self.connectedFlag == 1):
             data = self.senddataVar.get()
             data = data.replace("\n","") + "\n"
+            if (data != "\n"):
+                self.sendHistoryBuff.append(data)
+                print(self.sendHistoryBuff)
             # print("print_window send:", data)
             self.ConnectApi.write(data)
             self.senddataVar.set("")
             #self.receiveUpdateSignal.emit("")
         else:
             messagebox.showerror(title='警告！', message='未连接')
-
+    def senddatakeyup(self,ev = None):
+        tplen = len(self.sendHistoryBuff)
+        print(tplen,self.sendHistoryBuffCnt)
+        if (tplen > 0 and tplen > self.sendHistoryBuffCnt):
+            if (self.sendHistoryBuffCnt < tplen - 1):
+                currentcmd = self.sendHistoryBuff[tplen - self.sendHistoryBuffCnt]
+                self.sendHistoryBuffCnt = self.sendHistoryBuffCnt + 1
+            else:
+                currentcmd = ""
+            self.senddataVar.set(currentcmd)
+    def senddatakeydown(self,ev = None):
+        tplen = len(self.sendHistoryBuff)
+        print(tplen,self.sendHistoryBuffCnt)
+        if(tplen > 0):
+            if(self.sendHistoryBuffCnt > 1):
+                self.sendHistoryBuffCnt = self.sendHistoryBuffCnt - 1
+                currentcmd = self.sendHistoryBuff[tplen - self.sendHistoryBuffCnt]
+                self.sendHistoryBuffCnt = self.sendHistoryBuffCnt - 1
+            else:
+                currentcmd = ""
+            self.senddataVar.set(currentcmd)
 
 
 def main():

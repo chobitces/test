@@ -14,9 +14,13 @@ class Ui_MainWindows():
         myui.geometry(alignstr)
         # 设置窗口是否可变长、宽，True：可变，False：不可变
         myui.resizable(width=True, height=True)
+
+        self.frame_memu = tk.Frame(myui, bg="#FFFFF0") #象牙色
+        self.frame_memu.place(relx = 0.02, rely = 0.02, relheight = 0.04, relwidth = 0.96)
+
         # 定义一个容器放接受区域的显示
         self.frame_revaera = tk.Frame(myui, bg="red") #象牙色
-        self.frame_revaera.place(relx = 0.02, rely = 0.02, relheight = 0.58, relwidth = 0.96)
+        self.frame_revaera.place(relx = 0.02, rely = 0.06, relheight = 0.58, relwidth = 0.96)
         self.label_rev = tk.Label(self.frame_revaera, text = "接收区域")
         self.label_rev.place(relx = 0.02, rely = 0.02, relheight = 0.03, relwidth = 0.05)
         self.text_rev = tk.Text(self.frame_revaera, state = tk.DISABLED)
@@ -32,7 +36,7 @@ class Ui_MainWindows():
 
         # 定义一个容器放发送区域的显示
         self.frame_sendaera = tk.Frame(myui, bg="#FFFFF0") #象牙色
-        self.frame_sendaera.place(relx = 0.02,rely = 0.62,relheight = 0.36, relwidth = 0.96)
+        self.frame_sendaera.place(relx = 0.02,rely = 0.66,relheight = 0.32, relwidth = 0.96)
         self.label_send = tk.Label(self.frame_sendaera, text = "发送区域")
         self.label_send.place(relx = 0.02, rely = 0.02, relheight = 0.05, relwidth = 0.05)
 
