@@ -26,8 +26,6 @@ class Ui_ConnectSetWindows():
         self.combox_connecttype["values"]=("serial","SSH","telnet")
         self.combox_connecttype.current(0)
         self.combox_connecttype.grid(row=0, column=1)
-
-
 class Ui_SerialSetWindows():
     def __init__(self,ui,portlist):
         self.portvalue = tk.StringVar()
@@ -80,7 +78,6 @@ class Ui_SerialSetWindows():
         self.combox_stopbits["values"]= ("1", "1.5", "2")
         self.combox_stopbits.current(0)
         self.combox_stopbits.grid(row=4, column=1)
-
 class Ui_SshSetWindows():
     def __init__(self,ui):
         self.typevalue = tk.StringVar()

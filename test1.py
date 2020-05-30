@@ -67,7 +67,6 @@ class Application():
                 self.openConnectUi()
         else:
             messagebox.showerror(title='警告！', message='界面已打开')
-
     def treeviewClick(self,event):
         print("双击")
         item_text = 0
@@ -106,7 +105,6 @@ class Application():
                 self.receiveProcess.start()
         else:
             messagebox.showerror(title='警告！', message = "已连接")
-
     def mainUiWidget(self):
         # 添加菜单栏
         self.menu1 = tk.Menu(self.root, tearoff=0)  # 1的话多了一个虚线，如果点击的话就会发现，这个菜单框可以独立出来显示
@@ -130,7 +128,6 @@ class Application():
         self.entry_sendaera.bind("<KeyPress-Down>", self.senddatakeydown)
 
         self.MainWindow.text_rev.bind("<Button-3>",self.rightMouseEvent)
-
     def rightMouseEvent(self,event):
         self.rmMenu = tk.Menu(self.root,tearoff=False)
         self.rmMenu.add_command(label = "清除",command=lambda:self.MainWindow.clearRevArea())
@@ -274,7 +271,7 @@ class Application():
         if(self.connectedFlag == 1):
             data = self.senddataVar.get()
             data = data.replace("\n","") + "\n"
-            if (data != "\n"):
+            if (data != "\n" or (data in self.sendHistoryBuff)):
                 self.sendHistoryBuff.append(data)
                 print(self.sendHistoryBuff)
             # print("print_window send:", data)
@@ -286,23 +283,25 @@ class Application():
     def senddatakeyup(self,ev = None):
         tplen = len(self.sendHistoryBuff)
         print(tplen,self.sendHistoryBuffCnt)
-        if (tplen > 0 and tplen > self.sendHistoryBuffCnt):
-            if (self.sendHistoryBuffCnt < tplen - 1):
-                currentcmd = self.sendHistoryBuff[tplen - self.sendHistoryBuffCnt]
-                self.sendHistoryBuffCnt = self.sendHistoryBuffCnt + 1
+        if (tplen > 0):
+            if (self.sendHistoryBuffCnt < tplen):
+                currentcmd = self.sendHistoryBuff[tplen - self.sendHistoryBuffCnt - 1]
             else:
                 currentcmd = ""
+            if self.sendHistoryBuffCnt < (tplen - 1):
+                self.sendHistoryBuffCnt = self.sendHistoryBuffCnt + 1
             self.senddataVar.set(currentcmd)
     def senddatakeydown(self,ev = None):
         tplen = len(self.sendHistoryBuff)
         print(tplen,self.sendHistoryBuffCnt)
         if(tplen > 0):
-            if(self.sendHistoryBuffCnt > 1):
-                self.sendHistoryBuffCnt = self.sendHistoryBuffCnt - 1
+            if(self.sendHistoryBuffCnt > 0):
                 currentcmd = self.sendHistoryBuff[tplen - self.sendHistoryBuffCnt]
                 self.sendHistoryBuffCnt = self.sendHistoryBuffCnt - 1
             else:
                 currentcmd = ""
+
+
             self.senddataVar.set(currentcmd)
 
 
